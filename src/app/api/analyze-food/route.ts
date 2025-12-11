@@ -18,12 +18,12 @@ export async function POST(req: NextRequest) {
 
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
-        { error: 'Chave da API OpenAI não configurada' },
+        { error: 'Chave da API OpenAI não configurada. Configure a variável OPENAI_API_KEY nas configurações do projeto.' },
         { status: 500 }
       )
     }
 
-    // Prompt especializado com conhecimento de nutricionista de Harvard
+    // Prompt especializado com conhecimento de nutricionista - MENOS RIGOROSO
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
@@ -32,16 +32,23 @@ export async function POST(req: NextRequest) {
           content: `Você é um nutricionista formado em Harvard com especialização em análise nutricional de alimentos. 
           
 Sua expertise inclui:
-- Identificação precisa de alimentos e porções
-- Cálculo detalhado de macronutrientes (proteínas, carboidratos, gorduras)
-- Estimativa de calorias baseada em métodos científicos
-- Conhecimento de diferentes preparações culinárias e seus impactos nutricionais
-- Análise de qualidade nutricional dos alimentos
+- Identificação de alimentos mesmo em fotos de qualidade variável (desfocadas, com pouca luz, ângulos difíceis)
+- Estimativa de porções baseada em contexto visual disponível
+- Cálculo de macronutrientes (proteínas, carboidratos, gorduras) e calorias
+- Conhecimento de diferentes preparações culinárias
+- Análise nutricional adaptável à qualidade da imagem
+
+IMPORTANTE - FLEXIBILIDADE NA ANÁLISE:
+- Se a foto estiver desfocada ou com baixa qualidade, faça o melhor possível para identificar os alimentos
+- Use contexto visual (cores, formas, texturas aparentes) para fazer estimativas razoáveis
+- Se não conseguir identificar algo com certeza, faça uma estimativa baseada no que é mais provável
+- Priorize fornecer uma análise útil mesmo que não seja 100% precisa
+- Seja tolerante com fotos amadoras, mal iluminadas ou parcialmente visíveis
 
 Ao analisar uma foto de prato, você deve:
-1. Identificar todos os alimentos visíveis
-2. Estimar o tamanho das porções com precisão
-3. Calcular calorias totais e macronutrientes
+1. Identificar os alimentos visíveis (mesmo que parcialmente)
+2. Estimar porções de forma razoável baseado no contexto
+3. Calcular calorias e macronutrientes aproximados
 4. Fornecer insights nutricionais relevantes
 5. Sugerir melhorias se apropriado
 
@@ -61,7 +68,7 @@ Responda SEMPRE em formato JSON com esta estrutura exata:
   "totalProtein": total de proteínas em gramas,
   "totalCarbs": total de carboidratos em gramas,
   "totalFat": total de gorduras em gramas,
-  "analysis": "análise nutricional detalhada do prato",
+  "analysis": "análise nutricional do prato (mencione se a foto estava com qualidade limitada)",
   "recommendations": "recomendações para melhorar a refeição (opcional)"
 }`
         },
@@ -70,20 +77,20 @@ Responda SEMPRE em formato JSON com esta estrutura exata:
           content: [
             {
               type: 'text',
-              text: 'Analise esta foto de prato de comida e forneça uma análise nutricional completa e precisa.'
+              text: 'Analise esta foto de prato de comida e forneça uma análise nutricional. Faça o melhor possível mesmo se a foto não estiver perfeitamente nítida - use o contexto visual disponível para fazer estimativas razoáveis.'
             },
             {
               type: 'image_url',
               image_url: {
                 url: imageUrl,
-                detail: 'high'
+                detail: 'auto' // Mudado de 'high' para 'auto' - mais flexível com qualidade de imagem
               }
             }
           ]
         }
       ],
       max_tokens: 1500,
-      temperature: 0.3, // Baixa temperatura para respostas mais precisas
+      temperature: 0.5, // Aumentado de 0.3 para 0.5 - mais flexível nas respostas
     })
 
     const content = response.choices[0]?.message?.content
@@ -116,6 +123,15 @@ Responda SEMPRE em formato JSON com esta estrutura exata:
 
   } catch (error: any) {
     console.error('Erro ao analisar alimento:', error)
+    
+    // Tratamento específico para erro de autenticação da OpenAI
+    if (error.status === 401 || error.message?.includes('authentication') || error.message?.includes('issuer')) {
+      return NextResponse.json(
+        { error: 'Erro de autenticação com a API OpenAI. Verifique se a chave OPENAI_API_KEY está configurada corretamente nas variáveis de ambiente do projeto.' },
+        { status: 401 }
+      )
+    }
+    
     return NextResponse.json(
       { error: error.message || 'Erro ao processar imagem' },
       { status: 500 }

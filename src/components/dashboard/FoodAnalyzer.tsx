@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
-import { Camera, Upload, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
+import { Camera, Upload, Loader2, CheckCircle, AlertCircle, Image as ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
 
@@ -36,6 +36,9 @@ export default function FoodAnalyzer({ user }: FoodAnalyzerProps) {
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -168,33 +171,63 @@ export default function FoodAnalyzer({ user }: FoodAnalyzerProps) {
             Análise Nutricional com IA
           </h1>
           <p className="text-gray-600">
-            Tire uma foto do seu prato e receba uma análise detalhada de calorias e nutrientes
+            Tire uma foto, escolha da galeria ou faça upload de uma imagem do seu prato
           </p>
         </div>
 
-        {/* Upload Area */}
+        {/* Upload Options */}
         {!selectedImage && (
           <div className="bg-white rounded-2xl shadow-lg p-8 mb-6">
-            <label
-              htmlFor="image-upload"
-              className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-12 cursor-pointer hover:border-emerald-500 transition-colors"
-            >
-              <Camera className="w-16 h-16 text-gray-400 mb-4" />
-              <p className="text-lg font-medium text-gray-700 mb-2">
-                Clique para tirar foto ou fazer upload
-              </p>
-              <p className="text-sm text-gray-500">
-                PNG, JPG até 5MB
-              </p>
-              <input
-                id="image-upload"
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleImageSelect}
-                className="hidden"
-              />
-            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Camera Option */}
+              <button
+                onClick={() => cameraInputRef.current?.click()}
+                className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-8 cursor-pointer hover:border-emerald-500 hover:bg-emerald-50 transition-all"
+              >
+                <Camera className="w-12 h-12 text-emerald-600 mb-3" />
+                <p className="text-lg font-medium text-gray-700 mb-1">
+                  Tirar Foto
+                </p>
+                <p className="text-sm text-gray-500 text-center">
+                  Use a câmera do dispositivo
+                </p>
+              </button>
+
+              {/* Gallery/Files Option */}
+              <button
+                onClick={() => galleryInputRef.current?.click()}
+                className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-8 cursor-pointer hover:border-teal-500 hover:bg-teal-50 transition-all"
+              >
+                <ImageIcon className="w-12 h-12 text-teal-600 mb-3" />
+                <p className="text-lg font-medium text-gray-700 mb-1">
+                  Escolher da Galeria
+                </p>
+                <p className="text-sm text-gray-500 text-center">
+                  Selecione uma foto existente
+                </p>
+              </button>
+            </div>
+
+            <p className="text-center text-sm text-gray-500 mt-6">
+              Formatos aceitos: PNG, JPG, JPEG • Tamanho máximo: 5MB
+            </p>
+
+            {/* Hidden Inputs */}
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
           </div>
         )}
 
